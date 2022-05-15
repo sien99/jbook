@@ -1,5 +1,6 @@
 import * as esbuild from "esbuild-wasm";
 import { useEffect, useRef, useState } from "react";
+import { unpkgPathPlugin } from "./plugins/unpkg-path-plugin";
 
 function App() {
   // to refer on specific var in fx component
@@ -31,16 +32,25 @@ function App() {
   const onClick = async () => {
     if (!ref.current) return;
 
-    const res = await ref.current.transform(input, {
-      loader: "jsx",
-      target: "es2015",
+    //build
+    const result = await ref.current.build({
+      entryPoints: ["index.js"],
+      bundle: true,
+      write: false,
+      plugins: [unpkgPathPlugin()],
+      // TLDR: Define unreachable code, https://esbuild.github.io/api/#define
+      define: {
+        // "process.env.NODE_ENV": '"production"',
+        global: "window",
+      },
     });
-
-    setCode(res.code);
+    console.log(result);
+    setCode(result.outputFiles[0].text);
   };
 
   return (
     <div className='App'>
+      <h1>Mini Transpiler</h1>
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}></textarea>
