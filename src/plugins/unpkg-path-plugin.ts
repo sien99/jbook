@@ -1,7 +1,18 @@
 import axios from "axios";
 import * as esbuild from "esbuild-wasm";
+import localForage from "localforage";
 
-//* Override Esbuild Natural process that trying to access file system
+const fileCache = localForage.createInstance({
+  name: "filecache",
+});
+
+(async () => {
+  await fileCache.setItem("color", "red");
+  const color = await fileCache.getItem("color");
+  console.log(color);
+})();
+
+//* 1. Override Esbuild Natural process that trying to access file system
 export const unpkgPathPlugin = () => {
   const pkgReq = "axios"; //s,m,nested-test-pkg
   return {
@@ -53,16 +64,32 @@ export const unpkgPathPlugin = () => {
           // when reading file from directory not index.js, load contents here
         }
 
+        //* 2. Caching using IndexDB
+        //TODO1 check if cache available
+        //! we need to tell TS what result we are going to return, else it wil emit return type error: not matched OnLoadResult
+        const cachedResult = await fileCache.getItem<esbuild.OnLoadResult>(
+          args.path
+        );
+        if (cachedResult) {
+          return cachedResult;
+        }
+
+        // key:value - args.path: result={loader,contents,resolveDir}
         const { data, request } = await axios.get(args.path);
 
         // resolveDir is to communicate which dir to find the required file
         // onResolve retrieved payload with prop:resolveDir
-        return {
+        const result: esbuild.OnLoadResult = {
           loader: "jsx",
           contents: data,
           // new URL('./',"https://unpkg.com/nested-test-pkg@1.0.0/src/index.js")
           resolveDir: new URL("./", request.responseURL).pathname,
         };
+
+        //TODO2 save response into cache
+        await fileCache.setItem(args.path, result);
+
+        return result;
       });
     },
   };

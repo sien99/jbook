@@ -40,7 +40,7 @@ function App() {
       plugins: [unpkgPathPlugin()],
       // TLDR: Define unreachable code, https://esbuild.github.io/api/#define
       define: {
-        // "process.env.NODE_ENV": '"production"',
+        "process.env.NODE_ENV": '"production"', //!if (process.env.NODE_ENV !== "production") ...
         global: "window",
       },
     });
