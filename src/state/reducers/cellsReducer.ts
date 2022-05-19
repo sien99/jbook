@@ -1,3 +1,4 @@
+import produce from "immer";
 import { Cell } from "../cell";
 import { Action } from "../actions/index";
 import { ActionType } from "./../action-types/index";
@@ -18,23 +19,64 @@ const initialState: CellsState = {
   data: {},
 };
 
-const reducer = (
-  state: CellsState = initialState,
-  action: Action
-): CellsState => {
-  switch (action.type) {
-    case ActionType.UPDATE_CELL:
-      return state;
-    case ActionType.DELETE_CELL:
-      return state;
-    case ActionType.MOVE_CELL:
-      return state;
-    case ActionType.INSERT_CELL_BEFORE:
-      return state;
+// Update using immer: https://immerjs.github.io/immer/update-patterns
+// No need to write complex logic during state updates!
+const reducer = produce(
+  (state: CellsState = initialState, action: Action): CellsState => {
+    switch (action.type) {
+      case ActionType.UPDATE_CELL:
+        const { id, content } = action.payload;
+        state.data[id].content = content;
+        return state;
 
-    default:
-      return state;
-  }
+      case ActionType.DELETE_CELL:
+        delete state.data[action.payload];
+        state.order = state.order.filter((id) => id !== action.payload);
+        return state;
+
+      case ActionType.MOVE_CELL:
+        const { direction } = action.payload;
+        const index = state.order.findIndex((id) => id === action.payload.id);
+        const targetIndex = direction === "up" ? index - 1 : index + 1;
+
+        if (targetIndex < 0 || targetIndex > state.order.length - 1) {
+          return state;
+        }
+        state.order[index] = state.order[targetIndex];
+        // swapping current id with target id, temp = current id = payload id
+        state.order[targetIndex] = action.payload.id;
+        return state;
+
+      case ActionType.INSERT_CELL_BEFORE:
+        //array.splice(index, howmanyitemstoremove, item1, ....., itemX)
+        const cell: Cell = {
+          content: "",
+          type: action.payload.type,
+          id: randomId(),
+        };
+
+        state.data[cell.id] = cell;
+        //! in same switch block cannot declare same identifier name
+        //* Solution: declare helper function outside if the code size is massive
+        const foundIndex = state.order.findIndex(
+          (id) => id === action.payload.id
+        );
+        // if return -1 (=no match cell id) push cell id into end of order array
+        if (foundIndex < 0) state.order.push(cell.id);
+        // else go to foundIdx, remove 0 items, insert current cell id
+        else state.order.splice(foundIndex, 0, cell.id);
+
+        return state;
+
+      default:
+        return state;
+    }
+  },
+  initialState
+);
+
+const randomId = () => {
+  return Math.random().toString(36).substring(2, 7);
 };
 
 export default reducer;
