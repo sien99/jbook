@@ -3,11 +3,13 @@ import { Action } from "./../actions/index";
 import { produce } from "immer";
 
 interface BundlesState {
-  [key: string]: {
-    loading: boolean;
-    code: string;
-    err: string;
-  };
+  [key: string]:
+    | {
+        loading: boolean;
+        code: string;
+        err: string;
+      }
+    | undefined;
 }
 
 const initialState: BundlesState = {};
@@ -34,7 +36,8 @@ const reducers = produce(
       default:
         return state;
     }
-  }
+  },
+  initialState
 );
 
 export default reducers;

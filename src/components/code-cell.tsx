@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
-import bundle from "../bundler";
+import "./code-cell.css";
+import React, { useEffect } from "react";
 import { useActions } from "../hooks/use-actions";
+import { useTypedSelector } from "../hooks/use-typed-selector";
 import { Cell } from "../state";
 import CodeEditor from "./code-editor";
 import Preview from "./preview";
@@ -11,27 +12,28 @@ interface CodeCellProps {
 }
 
 const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
-  // to refer on specific var in fx component
-  const [err, setErr] = useState("");
-  const [code, setCode] = useState("");
-  const { updateCell } = useActions();
+  const { updateCell, createBundle } = useActions();
+  const bundle = useTypedSelector((state) => state.bundles[cell.id]);
 
   // Implement debouncing logic for code bundling
   useEffect(() => {
+    //* to handle first time unnecessary 750ms wait or 2 times rerender
+    //! cons: getting nasty deps error on eslint
+    if (!bundle) {
+      createBundle(cell.id, cell.content);
+      return;
+    }
     // return identifier for the timer function we create
     const timer = setTimeout(async () => {
-      //build
-      const output = await bundle(cell.content);
-      setCode(output.code);
-      setErr(output.err);
+      createBundle(cell.id, cell.content); //build
     }, 750);
 
     // cancel previous timer function once input changes
     return () => clearTimeout(timer);
-  }, [cell.content]);
+    // eslint-disable-next-line
+  }, [cell.id, cell.content, createBundle]);
 
-  const initValue = `// 1. Syntax Error: dwewhjdfwejyfd\n// 2. Runtime Error: invalidfunction()\n// 3. Asynchronous Error: setTimeout(()=>{error},1000)
-  `;
+  const initValue = "//Write Your Code Here";
 
   return (
     <Resizable direction='vertical'>
@@ -43,13 +45,25 @@ const CodeCell: React.FC<CodeCellProps> = ({ cell }) => {
         }}>
         <Resizable direction='horizontal'>
           <CodeEditor
-            initialValue={initValue}
+            initialValue={cell.content || initValue}
             onChange={(value) => {
               updateCell(cell.id, value);
             }}
           />
         </Resizable>
-        <Preview code={code} err={err} />
+        {/* Code Preview will not render when:
+        1. Initial undefined state due to 750ms loading period
+        2. Bundling process is loading  */}
+
+        {!bundle || bundle.loading ? (
+          <div className='progress-cover'>
+            <progress className='progress is-small is-primary' max='100'>
+              Loading
+            </progress>
+          </div>
+        ) : (
+          <Preview code={bundle.code} err={bundle.err} />
+        )}
       </div>
     </Resizable>
   );

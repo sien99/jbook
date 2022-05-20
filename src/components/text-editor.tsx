@@ -21,10 +21,10 @@ const TextEditor: React.FC<TextEditorProps> = ({ cell }) => {
         event.target &&
         ref.current.contains(event.target as Node)
       ) {
-        console.log("Inside Editor");
+        // console.log("Inside Editor");
         return;
       }
-      console.log("Outside Editor");
+      // console.log("Outside Editor");
 
       setEditing(false);
     };
