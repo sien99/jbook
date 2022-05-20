@@ -27,6 +27,7 @@ const reducer = produce(
       case ActionType.UPDATE_CELL:
         const { id, content } = action.payload;
         state.data[id].content = content;
+
         return state;
 
       case ActionType.DELETE_CELL:
@@ -47,7 +48,7 @@ const reducer = produce(
         state.order[targetIndex] = action.payload.id;
         return state;
 
-      case ActionType.INSERT_CELL_BEFORE:
+      case ActionType.INSERT_CELL_AFTER:
         //array.splice(index, howmanyitemstoremove, item1, ....., itemX)
         const cell: Cell = {
           content: "",
@@ -61,10 +62,10 @@ const reducer = produce(
         const foundIndex = state.order.findIndex(
           (id) => id === action.payload.id
         );
-        // if return -1 (=no match cell id) push cell id into end of order array
-        if (foundIndex < 0) state.order.push(cell.id);
-        // else go to foundIdx, remove 0 items, insert current cell id
-        else state.order.splice(foundIndex, 0, cell.id);
+        // if return -1 (=no match cell id) unshift cell id into start of order array
+        if (foundIndex < 0) state.order.unshift(cell.id);
+        // else go to foundIdx+1(position of next element), remove 0 items, insert current cell id
+        else state.order.splice(foundIndex + 1, 0, cell.id);
 
         return state;
 
